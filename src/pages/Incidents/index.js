@@ -9,18 +9,34 @@ import styles from './styles'
 export default function Incidents(){
     const [ incidents, setIncidents] = useState([])
     const [ total, setTotal ] = useState(0)
+    const [ page, setPage ] = useState(1)
+    const [ loading, setLoading ] = useState(false)
+
 
     const navigation = useNavigation()
 
-    function navigateToDetail(){
-        navigation.navigate('Detail')
+    function navigateToDetail(incident){
+        navigation.navigate('Detail', { incident })
     }
 
     async function loadIncidents(){
-        const res = await api.get('incidents')
+        if( loading ) {
+            return
+        }
+        if( total > 0 && incidents.length === total ){
+            return
+        }
+        setLoading(true)
 
-        setIncidents(res.data)
+
+        const res = await api.get('incidents',{
+            params: { page }
+        })
+        
+        setIncidents([...incidents,...res.data])
         setTotal(res.headers['x-total-count'])
+        setPage(page + 1 )
+        setLoading(false)
     }   
 
     useEffect(() => {
@@ -45,6 +61,7 @@ export default function Incidents(){
                 data={incidents}
                 keyExtractor={incident => String(incident.id)}
                 showsVerticalScrollIndicator={false}
+                onEndReached={loadIncidents}
                 renderItem={( { item: incident }) => (
                     <View style={styles.incident}>
                         <Text style={styles.incidentProperty}>ONG: </Text>
@@ -56,7 +73,7 @@ export default function Incidents(){
                         <Text style={styles.incidentProperty}>VALOR: </Text>
                         <Text style={styles.incidentValue}>{Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL'}).format(incident.value)}</Text>
 
-                        <TouchableOpacity style={styles.detailsButton} onPress={navigateToDetail} >
+                        <TouchableOpacity style={styles.detailsButton} onPress={() => navigateToDetail(incident)} >
                             <Text style={styles.detailsButtonText}>Ver mais detalhes</Text>
                             <Icon name="arrow-right" size={16} color="#E02041" />
                         </TouchableOpacity>
